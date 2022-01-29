@@ -47,7 +47,6 @@ dependencies = [
  "hyper",
  "hyper-tls",
  "lazy_static",
- "nonzero_ext",
  "tokio",
 ]
 
