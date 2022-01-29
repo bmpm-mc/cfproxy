@@ -32,12 +32,12 @@ lazy_static! {
     static ref CF_API_KEY: String = env::var("CF_API_KEY").expect("Expected CF_API_KEY to contain a cf api key");
 
     /// The port this proxy is running at. Read from the `PORT` env variable.
-    static ref PORT_ENV: String = env::var("PORT").unwrap_or(String::from("3000"));
-    static ref PORT: u16 = PORT_ENV.parse::<u16>().expect("Expected PORT environment variable to contain a number");
+    static ref PORT: u16 = env::var("PORT").unwrap_or(String::from("3000"))
+        .parse::<u16>().expect("Expected PORT environment variable to contain a number");
 
     /// How many requests per secs are allowed per ip. Read from the `REQ_LIMIT_PER_SEC` env variable.
-    static ref REQ_LIMIT_PER_SEC_ENV: String = env::var("REQ_LIMIT_PER_SEC").unwrap_or(String::from("6"));
-    static ref REQ_LIMIT_PER_SEC: u32 = REQ_LIMIT_PER_SEC_ENV.parse::<u32>().expect("Expected REQ_LIMIT_PER_SEC env var to contain a number");
+    static ref REQ_LIMIT_PER_SEC: u32 = env::var("REQ_LIMIT_PER_SEC").unwrap_or(String::from("6"))
+        .parse::<u32>().expect("Expected REQ_LIMIT_PER_SEC env var to contain a number");
 }
 
 /// Converts a request to this server into a request that can be made against the Curseforge API.
@@ -75,6 +75,7 @@ async fn main() {
         let bucket = Arc::clone(&bucket);
 
         async move {
+
             // Wait until the rate limiter allows this request
             bucket.until_key_ready_with_jitter(&remote_addr, Jitter::up_to(Duration::from_secs(1))).await;
             if let Err(_) = bucket.check_key(&remote_addr) {
@@ -82,6 +83,7 @@ async fn main() {
             }
 
             Ok::<_, Infallible>(service_fn(move |req: Request<Body>| async move {
+
                 // Get new CF api request from current request
                 let proxy_req = get_proxy_request(req);
 
