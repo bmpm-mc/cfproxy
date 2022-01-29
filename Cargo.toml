@@ -1,0 +1,15 @@
+[package]
+name = "cfproxy"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dotenv = "0.15.0"
+hyper = { version = "0.14", features = ["full"] }
+hyper-tls = "0.5.0"
+tokio = { version = "1", features = ["full"] }
+lazy_static = "1.4.0"
+governor = "0.4.1"
+nonzero_ext = "0.3.0"
