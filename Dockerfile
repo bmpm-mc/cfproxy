@@ -1,11 +1,21 @@
-# 1. This tells docker to use the Rust official image
-FROM rust:1.58
+FROM rust:1.58 as build
 
-# 2. Copy the files in your machine to the Docker image
-COPY ./ ./
+RUN USER=root cargo new --bin cfproxy
+WORKDIR /cfproxy
 
-# Build your program for release
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./Cargo.toml ./Cargo.toml
+
+RUN cargo build --release
+RUN rm src/*.rs
+
+COPY ./src ./src
+
+RUN rm ./target/release/deps/cfproxy*
 RUN cargo build --release
 
-# Run the binary
-CMD ["./target/release/cfproxy"]
+FROM debian:buster-slim
+
+COPY --from=build /cfproxy/target/release/cfproxy .
+
+CMD ["./cfproxy"]
