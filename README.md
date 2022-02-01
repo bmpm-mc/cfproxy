@@ -10,7 +10,7 @@ There is no authentification, but to prevent API abuse, requests get rate limite
 
 ## Docs
 
-Every request can be made as seen in [the Curseforge API docs](https://docs.curseforge.com/#getting-started), but instead of using `https://api.curseforge.com` as the base url, use *whatever url this server runs at*.
+Every request can be made as seen in [the Curseforge API docs](https://docs.curseforge.com/#getting-started), but instead of using `https://api.curseforge.com` as the base url, use `https://cfproxy.fly.dev/`.
 
 Both headers, path, params and body should be proxied to CF, if you notice something odd or think something doesn't get proxied, please open an issue.
 

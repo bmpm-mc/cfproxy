@@ -62,7 +62,7 @@ fn get_proxy_request(mut req: Request<Body>) -> Request<Body> {
 async fn main() {
     dotenv().ok();
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], *PORT));
+    let addr = SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], *PORT));
 
     // Init the rate limiter in an ARC so it can be shared across requests
     let rate_limit_quota = Quota::per_second(NonZeroU32::new(*REQ_LIMIT_PER_SEC).expect("Expected req limit to not be null"));
