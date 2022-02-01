@@ -79,7 +79,7 @@ async fn main() {
             // Wait until the rate limiter allows this request
             bucket.until_key_ready_with_jitter(&remote_addr, Jitter::up_to(Duration::from_secs(1))).await;
             if let Err(_) = bucket.check_key(&remote_addr) {
-                println!("[{:>15}] <!> Rate limit was hit", remote_addr.to_string());
+                println!("[{}] <!> Rate limit was hit", remote_addr.to_string());
             }
 
             Ok::<_, Infallible>(service_fn(move |req: Request<Body>| async move {
@@ -94,10 +94,10 @@ async fn main() {
 
                 // Do request & send back response
                 if let Ok(resp) = client.request(proxy_req).await {
-                    println!("[{:>15}] <-> {} => {}", remote_addr.to_string(), uri.path(), resp.status().as_str());
+                    println!("[{}] <-> {} => {}", remote_addr.to_string(), uri.path(), resp.status().as_str());
                     Ok::<_, Infallible>(resp)
                 } else {
-                    eprintln!("[{:>15}] <!> {} failed", remote_addr.to_string(), uri.path());
+                    eprintln!("[{}] <!> {} failed", remote_addr.to_string(), uri.path());
                     Ok::<_, Infallible>(Response::builder().status(500).body(Body::from("Proxy Server Error while reading request")).unwrap())
                 }
             }))
