@@ -93,12 +93,19 @@ async fn main() {
                 let uri = proxy_req.uri().clone();
 
                 // Do request & send back response
-                if let Ok(resp) = client.request(proxy_req).await {
-                    println!("[{}] <-> {} => {}", remote_addr.to_string(), uri.path(), resp.status().as_str());
-                    Ok::<_, Infallible>(resp)
-                } else {
-                    eprintln!("[{}] <!> {} failed", remote_addr.to_string(), uri.path());
-                    Ok::<_, Infallible>(Response::builder().status(500).body(Body::from("Proxy Server Error while reading request")).unwrap())
+                match client.request(proxy_req).await {
+                    Ok(resp) => {
+                        println!("[{}] <-> {} => {}", remote_addr.to_string(), uri.path(), resp.status().as_str());
+                        Ok::<_, Infallible>(resp)
+                    }
+                    Err(err) => {
+                        eprintln!("[{}] <!> {} failed: {:#?}", remote_addr.to_string(), uri.path(), err);
+                        Ok::<_, Infallible>(Response::builder()
+                            .status(500)
+                            .body(Body::from("Proxy Server Error while reading request"))
+                            .unwrap()
+                        )
+                    }
                 }
             }))
         }
