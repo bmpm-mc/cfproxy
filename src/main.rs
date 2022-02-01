@@ -19,18 +19,14 @@ use std::sync::Arc;
 use std::time::Duration;
 use dotenv::dotenv;
 use governor::{RateLimiter, Quota, Jitter};
-use hyper::header::{HeaderValue, HeaderName};
-use hyper::http::uri::{Authority, Scheme};
 use hyper::server::conn::AddrStream;
-use hyper::{Body, Client, Request, Response, Server, Uri};
+use hyper::{Body, Request, Server};
 use hyper::service::{make_service_fn, service_fn};
 use lazy_static::lazy_static;
 use tokio;
+use cfproxy::proxy_request_to_cf;
 
 lazy_static! {
-    /// The CF api key used to authenticate requests. Read from the `CF_API_KEY` env variable.
-    static ref CF_API_KEY: String = env::var("CF_API_KEY").expect("Expected CF_API_KEY to contain a cf api key");
-
     /// The port this proxy is running at. Read from the `PORT` env variable.
     static ref PORT: u16 = env::var("PORT").unwrap_or(String::from("3000"))
         .parse::<u16>().expect("Expected PORT environment variable to contain a number");
@@ -38,24 +34,6 @@ lazy_static! {
     /// How many requests per secs are allowed per ip. Read from the `REQ_LIMIT_PER_SEC` env variable.
     static ref REQ_LIMIT_PER_SEC: u32 = env::var("REQ_LIMIT_PER_SEC").unwrap_or(String::from("6"))
         .parse::<u32>().expect("Expected REQ_LIMIT_PER_SEC env var to contain a number");
-}
-
-/// Converts a request to this server into a request that can be made against the Curseforge API.
-fn get_proxy_request(mut req: Request<Body>) -> Request<Body> {
-
-    // Set authority part of URL to the Curseforge API & scheme to HTTPS
-    let mut uri_parts = req.uri_mut().clone().into_parts();
-    uri_parts.authority = Some(Authority::from_static("api.curseforge.com"));
-    uri_parts.scheme = Some(Scheme::HTTPS);
-    *req.uri_mut() = Uri::from_parts(uri_parts).unwrap();
-
-    // Set HOST header, otherwise CF will reject requests
-    req.headers_mut().insert(HeaderName::from_static("host"), HeaderValue::from_static("api.curseforge.com"));
-
-    // Set authentification header
-    req.headers_mut().insert("x-api-key", HeaderValue::from_str(&CF_API_KEY[..]).unwrap());
-
-    req
 }
 
 #[tokio::main]
@@ -82,31 +60,9 @@ async fn main() {
                 println!("[{}] <!> Rate limit was hit", remote_addr.to_string());
             }
 
+            // Pass the request to the service handler
             Ok::<_, Infallible>(service_fn(move |req: Request<Body>| async move {
-
-                // Get new CF api request from current request
-                let proxy_req = get_proxy_request(req);
-
-                // Init HTTPS client
-                let https = hyper_tls::HttpsConnector::new();
-                let client = Client::builder().build::<_, Body>(https);
-                let uri = proxy_req.uri().clone();
-
-                // Do request & send back response
-                match client.request(proxy_req).await {
-                    Ok(resp) => {
-                        println!("[{}] <-> {} => {}", remote_addr.to_string(), uri.path(), resp.status().as_str());
-                        Ok::<_, Infallible>(resp)
-                    }
-                    Err(err) => {
-                        eprintln!("[{}] <!> {} failed: {:#?}", remote_addr.to_string(), uri.path(), err);
-                        Ok::<_, Infallible>(Response::builder()
-                            .status(500)
-                            .body(Body::from("Proxy Server Error while reading request"))
-                            .unwrap()
-                        )
-                    }
-                }
+                proxy_request_to_cf(req, &remote_addr).await
             }))
         }
     });
