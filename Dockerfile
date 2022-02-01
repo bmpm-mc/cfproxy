@@ -14,8 +14,8 @@ COPY ./src ./src
 RUN rm ./target/release/deps/cfproxy*
 RUN cargo build --release
 
-FROM debian:buster-slim
+FROM debian:bullseye
 
-COPY --from=build /cfproxy/target/release/cfproxy .
+COPY --from=build ./cfproxy/target/release/cfproxy .
 
 CMD ["./cfproxy"]
