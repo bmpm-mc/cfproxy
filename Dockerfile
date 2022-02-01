@@ -14,7 +14,7 @@ COPY ./src ./src
 RUN rm ./target/release/deps/cfproxy*
 RUN cargo build --release
 
-FROM debian:bullseye
+FROM rust:1.58
 
 COPY --from=build ./cfproxy/target/release/cfproxy .
 
