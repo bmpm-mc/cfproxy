@@ -24,7 +24,6 @@ use hyper::{Body, Request, Server};
 use hyper::service::{make_service_fn, service_fn};
 use lazy_static::lazy_static;
 use tokio;
-use cfproxy::proxy_request_to_cf;
 
 lazy_static! {
     /// The port this proxy is running at. Read from the `PORT` env variable.
@@ -47,23 +46,30 @@ async fn main() {
     let limiter = RateLimiter::<IpAddr, _, _>::keyed(rate_limit_quota);
     let bucket = Arc::new(limiter);
 
-    let service = make_service_fn(|socket: &AddrStream| {
+    let service = make_service_fn(move |socket: &AddrStream| {
 
         let remote_addr = socket.remote_addr().ip();
         let bucket = Arc::clone(&bucket);
 
         async move {
 
-            // Wait until the rate limiter allows this request
-            bucket.until_key_ready_with_jitter(&remote_addr, Jitter::up_to(Duration::from_secs(1))).await;
-            if let Err(_) = bucket.check_key(&remote_addr) {
-                println!("[{}] <!> Rate limit was hit", remote_addr.to_string());
-            }
+            let service = service_fn(move |req: Request<Body>| {
+
+                let bucket = Arc::clone(&bucket);
+
+                async move {
+                    // Wait until the rate limiter allows this request
+                    let remote_addr = cfproxy::get_real_ip_addr(&req, &remote_addr);
+                    bucket.until_key_ready_with_jitter(&remote_addr, Jitter::up_to(Duration::from_secs(1))).await;
+                    if let Err(_) = bucket.check_key(&remote_addr) {
+                        println!("[{}] <!> Rate limit was hit", remote_addr.to_string());
+                    }
+                    cfproxy::proxy_request_to_cf(req, &remote_addr).await
+                }
+            });
 
             // Pass the request to the service handler
-            Ok::<_, Infallible>(service_fn(move |req: Request<Body>| async move {
-                proxy_request_to_cf(req, &remote_addr).await
-            }))
+            Ok::<_, Infallible>(service)
         }
     });
 

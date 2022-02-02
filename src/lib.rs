@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use std::env;
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use hyper::header::{HeaderValue, HeaderName};
 use hyper::http::uri::{Authority, Scheme};
 use hyper::{Body, Client, Request, Response, Uri};
@@ -32,6 +32,25 @@ fn get_proxy_req(mut req: Request<Body>) -> Request<Body> {
     req.headers_mut().insert("x-api-key", HeaderValue::from_str(&CF_API_KEY[..]).unwrap());
 
     req
+}
+
+/// Returns the IP address of the remote connection.
+/// 
+/// This server might be deployed behind a reverse proxy, in which case the 'real' ip address is
+/// provided in the header 'Fly-Client-IP'
+pub fn get_real_ip_addr(req: &Request<Body>, remote_addr: &IpAddr) -> IpAddr {
+    if let Some(client_ip) = req.headers().get("Fly-Client-IP") {
+        let client_ip: String = client_ip.to_str().unwrap().into();
+        if !client_ip.is_empty() {
+            if let Ok(client_ip) = client_ip.parse::<Ipv4Addr>() {
+                return IpAddr::V4(client_ip);
+            }
+            if let Ok(client_ip) = client_ip.parse::<Ipv6Addr>() {
+                return IpAddr::V6(client_ip);
+            }
+        }
+    }
+    *remote_addr
 }
 
 /// Forwards the request to the CF API and returns the API's response.
