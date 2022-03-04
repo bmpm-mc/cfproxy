@@ -30,9 +30,9 @@ lazy_static! {
     static ref PORT: u16 = env::var("PORT").unwrap_or(String::from("3000"))
         .parse::<u16>().expect("Expected PORT environment variable to contain a number");
 
-    /// How many requests per secs are allowed per ip. Read from the `REQ_LIMIT_PER_SEC` env variable.
-    static ref REQ_LIMIT_PER_SEC: u32 = env::var("REQ_LIMIT_PER_SEC").unwrap_or(String::from("6"))
-        .parse::<u32>().expect("Expected REQ_LIMIT_PER_SEC env var to contain a number");
+    /// How many requests per secs are allowed per ip. Read from the `REQ_LIMIT_PER_HOUR` env variable.
+    static ref REQ_LIMIT_PER_HOUR: u32 = env::var("REQ_LIMIT_PER_HOUR").unwrap_or(String::from("21600"))
+        .parse::<u32>().expect("Expected REQ_LIMIT_PER_HOUR env var to contain a number");
 }
 
 #[tokio::main]
@@ -42,7 +42,7 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], *PORT));
 
     // Init the rate limiter in an ARC so it can be shared across requests
-    let rate_limit_quota = Quota::per_second(NonZeroU32::new(*REQ_LIMIT_PER_SEC).expect("Expected req limit to not be null"));
+    let rate_limit_quota = Quota::per_hour(NonZeroU32::new(*REQ_LIMIT_PER_HOUR).expect("Expected req limit to not be null"));
     let limiter = RateLimiter::<IpAddr, _, _>::keyed(rate_limit_quota);
     let bucket = Arc::new(limiter);
 

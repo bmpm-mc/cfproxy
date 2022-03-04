@@ -36,4 +36,4 @@ Additional options are configured through environment variables:
 | --- | ---------- | ------- |
 | `CF_API_KEY` | string | Your API key you got from Curseforge.
 | `PORT` | number | The port at which to start up the server. Optional - defaults to `3000`.
-| `REQ_LIMIT_PER_SEC` | number | How many requests per second per IP address are allowed. Optional - defaults to `6`.
+| `REQ_LIMIT_PER_HOUR` | number | How many requests per hour per IP address are allowed. Optional - defaults to `21600` (approx. 6 per second).
